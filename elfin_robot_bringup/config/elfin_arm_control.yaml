@@ -1,16 +1,16 @@
 /**:
     ros__parameters:
-        elfin_ethernet_name: ens33
-        slave_no: [1, 2, 3]
+        elfin_ethernet_name: enp2s0
+        slave_no: [2, 3, 4]
         joint_names: [elfin_joint2, elfin_joint1, elfin_joint3, elfin_joint4, elfin_joint5, elfin_joint6]
         reduction_ratios: [101.0, 101.0, 101.0, 101.0, 101.0, 101.0]
-        count_zeros: [1479495, 10118219, 2512119, 2713453, 1797481, 3784784]
+        count_zeros: [90864, -28304, 274467, 4092217, 2583403, 3415733]  # 顺序 [J2, J1, J3, J4, J5, J6]，2026-08-20 待测机出厂「输入端原点」
         axis_position_factors: [131072.0, 131072.0, 131072.0, 131072.0, 131072.0, 131072.0]
-        axis_torque_factors: [5251.283, 5251.283, 8533.125, 8533.125, 15975.05, 15975.05]
+        axis_torque_factors: [2536.224, 2536.224, 5251.283, 5251.283, 15975.05, 15975.05]
 
 controller_manager:
   ros__parameters:
-    update_rate: 250
+    update_rate: 250  # 上游 humble 默认（工位 Foxy 时期为 50），实机验证后如不稳可回调
 
     elfin_arm_controller:
       type: joint_trajectory_controller/JointTrajectoryController

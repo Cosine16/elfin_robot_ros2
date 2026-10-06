@@ -45,12 +45,11 @@ ElfinEtherCATIOClient::ElfinEtherCATIOClient(EtherCatManager *manager, int slave
     manager_(manager), slave_no_(slave_no), io_nh_(nh)
 {
     // init pdo_input and output
-    std::string name_pdo_input[5]={"Digital_Input", "Analog_Input_channel1", "Analog_Input_channel2",
-                                  "Smart_Camera_X", "Smart_Camera_Y"};
-    uint8_t channel_pdo_input[5]={0, 4, 8, 12, 16};
+    std::string name_pdo_input[1]={"Digital_Input"};
+    uint8_t channel_pdo_input[1]={24};
     pdo_input.clear();
     ElfinPDOunit unit_tmp;
-    for(unsigned i=0; i<5; ++i)
+    for(unsigned i=0; i<1; ++i)
     {
         unit_tmp.name=name_pdo_input[i];
         unit_tmp.channel=channel_pdo_input[i];
@@ -86,21 +85,21 @@ int16_t ElfinEtherCATIOClient::readInput_unit(int n)
 {
 
     int16_t map;
-    map = (manager_->readSDO<int16_t>(4, 0x6001, 0x01)); // read the end DI
+    map = (manager_->readSDO<int16_t>(5, 0x6001, 0x01)); // read the end DI
     return map;
 }
 
 int32_t ElfinEtherCATIOClient::readOutput_unit(int n)
 {
     int32_t map;
-    map = (manager_->readSDO<int32_t>(4, 0x7001, 0x01)) << 12; 
+    map = (manager_->readSDO<int32_t>(5, 0x7001, 0x01)) << 12; 
     return map;
 }
 
 void ElfinEtherCATIOClient::writeOutput_unit(int n, int32_t val)
 {
 
-    manager_->writeSDO<int32_t>(4,0x7001,0x01, val >> 12);
+    manager_->writeSDO<int32_t>(5,0x7001,0x01, val >> 12);
 }
 
 
@@ -110,16 +109,16 @@ int32_t ElfinEtherCATIOClient::readSDO_unit(int n)
     if(n<0 || n>=pdo_input.size())
         return 0x0000;
     // 20201116: build the connection.
-    manager_->writeSDO<int>(3,0x3100,0x0,1); // Modbus DO command
+    manager_->writeSDO<int>(5,0x3100,0x0,1); // Modbus DO command
     usleep(50000);
-    manager_->writeSDO<int32_t>(3,0x3101,0x0,0x010040); // 64 connect to Modbus
+    manager_->writeSDO<int32_t>(5,0x3101,0x0,0x010040); // 64 connect to Modbus
     usleep(50000);
-    manager_->writeSDO<int32_t>(3,0x3102,0x0,0x010001); // Modbus Addr & count
+    manager_->writeSDO<int32_t>(5,0x3102,0x0,0x010001); // Modbus Addr & count
     usleep(50000);
     // 0x2126, L_4 is end DI, H_4 is button DI.
     int32_t map;
-    map = (manager_->readSDO<int32_t>(3, 0x2126, 0x0)) << 16; // read the end DI
-    manager_->writeSDO<int>(3,0x3100,0x0,0); // Modbus DO command 0
+    map = (manager_->readSDO<int32_t>(5, 0x2126, 0x0)) << 16; // read the end DI
+    manager_->writeSDO<int>(5,0x3100,0x0,0); // Modbus DO command 0
     usleep(50000);
     return map;
 }
@@ -130,16 +129,16 @@ int32_t ElfinEtherCATIOClient::readDO_unit(int n)
     if(n<0 || n>=pdo_input.size())
         return 0x0000;
     // 20201130: build the connection.
-    manager_->writeSDO<int>(3,0x3100,0x0,1); // Modbus DO command
+    manager_->writeSDO<int>(5,0x3100,0x0,1); // Modbus DO command
     usleep(50000);
-    manager_->writeSDO<int32_t>(3,0x3101,0x0,0x010040); // 64 connect to Modbus
+    manager_->writeSDO<int32_t>(5,0x3101,0x0,0x010040); // 64 connect to Modbus
     usleep(50000);
-    manager_->writeSDO<int32_t>(3,0x3102,0x0,0x010001); // Modbus Addr & count
+    manager_->writeSDO<int32_t>(5,0x3102,0x0,0x010001); // Modbus Addr & count
     usleep(50000);
     // 0x310C, DO.
     int32_t map;
-    map = (manager_->readSDO<int32_t>(4, 0x7001, 0x0)) << 12; // read the end DO
-    manager_->writeSDO<int>(3,0x3100,0x0,0); // Modbus DO command 0
+    map = (manager_->readSDO<int32_t>(5, 0x7001, 0x0)) << 12; // read the end DO
+    manager_->writeSDO<int>(5,0x3100,0x0,0); // Modbus DO command 0
     usleep(50000);
     return map;
 }
@@ -148,15 +147,15 @@ int32_t ElfinEtherCATIOClient::readDO_unit(int n)
 int32_t ElfinEtherCATIOClient::writeSDO_unit(int32_t val)
 {
     // 20201119: high the LED and DO of the end
-    manager_->writeSDO<int>(3,0x3100,0x0,1); // Modbus DO command
+    manager_->writeSDO<int>(5,0x3100,0x0,1); // Modbus DO command
     usleep(50000);
-    manager_->writeSDO<int32_t>(3,0x3101,0x0,0x010006); // Modbus SlaveID & Function
+    manager_->writeSDO<int32_t>(5,0x3101,0x0,0x010006); // Modbus SlaveID & Function
     usleep(50000);
-    manager_->writeSDO<int32_t>(3,0x3102,0x0,0x010001); // Modbus Addr & count
+    manager_->writeSDO<int32_t>(5,0x3102,0x0,0x010001); // Modbus Addr & count
     usleep(50000);
-    manager_->writeSDO<int32_t>(3,0x310C,0x0, val >> 12); // Write the LED and DO
+    manager_->writeSDO<int32_t>(5,0x310C,0x0, val >> 12); // Write the LED and DO
     usleep(50000);
-    manager_->writeSDO<int>(3,0x3100,0x0,0); // Modbus DO command 0
+    manager_->writeSDO<int>(5,0x3100,0x0,0); // Modbus DO command 0
     usleep(50000);
 
     return 0;
@@ -170,7 +169,7 @@ std::string ElfinEtherCATIOClient::getTxSDO()
     char temp[8];
     std::string result="slave";
     result.reserve(160);
-    result.append("4_txpdo:\n");
+    result.append("5_txpdo:\n");
     for (unsigned i = 0; i < length; ++i)
     {
         map[i] = 0x00;
@@ -189,7 +188,7 @@ std::string ElfinEtherCATIOClient::getRxSDO()
     char temp[8];
     std::string result="slave";
     result.reserve(160);
-    result.append("4_rxpdo:\n");
+    result.append("5_rxpdo:\n");
     for (unsigned i = 0; i < length; ++i)
     {
         map[i] = 0x00;
