@@ -55,13 +55,15 @@ def generate_launch_description():
     kinematics_yaml = load_yaml(
         "elfin5_ros2_moveit2", "config/kinematics.yaml"
     )
+    # MoveIt 从 robot_description_kinematics.<group> 读取 IK 插件配置
+    robot_description_kinematics = {"robot_description_kinematics": kinematics_yaml}
 
     elfin_basic_api_node = Node(
         name="elfin_basic_node",
         package="elfin_basic_api",
         executable="elfin_basic_api_node",
         output="screen",
-        parameters=[robot_description,robot_description_semantic,kinematics_yaml],
+        parameters=[robot_description,robot_description_semantic,robot_description_kinematics],
     )
 
     return LaunchDescription(
