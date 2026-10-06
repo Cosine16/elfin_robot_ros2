@@ -122,21 +122,10 @@ def generate_launch_description():
                 on_exit=[load_joint_trajectory_controller],
             )
     )
-    # ros2_control:
-    ros2_controllers_path = os.path.join(
-        get_package_share_directory("elfin5_ros2_gazebo"),
-        "config",
-        "elfin_arm_controller.yaml",
-    )
-    ros2_control_node = Node(
-        package="controller_manager",
-        executable="ros2_control_node",
-        parameters=[robot_description, ros2_controllers_path],
-        output={
-            "stdout": "screen",
-            "stderr": "screen",
-        },
-    )
+    # ros2_control: controller_manager 由 gazebo_ros2_control 插件在 gzserver 内创建，
+    # 它使用 GazeboSystemInterface 正确加载 GazeboSystem 硬件并驱动 Gazebo 物理。
+    # 因此不要再启动独立的 ros2_control_node —— 它会按 hardware_interface::SystemInterface
+    # 去 pluginlib 查找 GazeboSystem（基类不匹配）导致启动即 SIGABRT 崩溃。
     # Load controllers: 
     load_controllers = []
     for controller in [
@@ -231,7 +220,7 @@ def generate_launch_description():
         parameters=[
             robot_description,
             robot_description_semantic,
-            kinematics_yaml,
+            robot_description_kinematics,
             ompl_planning_pipeline_config,
             trajectory_execution,
             moveit_controllers,
@@ -254,7 +243,7 @@ def generate_launch_description():
             robot_description,
             robot_description_semantic,
             ompl_planning_pipeline_config,
-            kinematics_yaml,
+            robot_description_kinematics,
             {'use_sim_time': True},
         ],
         condition=UnlessCondition(load_RVIZfile),
@@ -270,7 +259,6 @@ def generate_launch_description():
             # ROS2_CONTROL:
             static_tf,
             robot_state_publisher,
-            # ros2_control_node,
             
             RegisterEventHandler(
                 OnProcessExit(
