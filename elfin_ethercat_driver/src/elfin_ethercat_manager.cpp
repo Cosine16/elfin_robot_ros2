@@ -71,7 +71,7 @@ void handleErrors()
   ec_readstate();
   for (int slave = 1; slave <= ec_slavecount; slave++)
   {
-    if ((ec_slave[slave].group == 0) && (ec_slave[slave].state != EC_STATE_OPERATIONAL) && slave != 4)
+    if ((ec_slave[slave].group == 0) && (ec_slave[slave].state != EC_STATE_OPERATIONAL) && slave != 5)
     {
       ec_group[0].docheckstate = TRUE;
       if (ec_slave[slave].state == (EC_STATE_SAFE_OP + EC_STATE_ERROR))
@@ -80,17 +80,17 @@ void handleErrors()
         ec_slave[slave].state = (EC_STATE_SAFE_OP + EC_STATE_ACK);
         ec_writestate(slave);
       }
-      else if(ec_slave[slave].state == EC_STATE_SAFE_OP && slave != 4)
+      else if(ec_slave[slave].state == EC_STATE_SAFE_OP)
       {
         fprintf(stderr, "WARNING : slave %d is in SAFE_OP, change to OPERATIONAL.\n", slave);
         ec_slave[slave].state = EC_STATE_OPERATIONAL;
         ec_writestate(slave);
       }
-      else if(slave == 4 && ec_slave[slave].state != EC_STATE_SAFE_OP)
+      else if(slave == 5 && ec_slave[slave].state != EC_STATE_SAFE_OP)
       {
-        fprintf(stderr, "WARNING : slave %d is no in SAFE_OP, change to SAFE_OP.\n", slave);
-        ec_slave[slave].state = EC_STATE_SAFE_OP;
-        ec_writestate(slave);
+         fprintf(stderr, "WARNING : slave %d is no in SAFE_OP, change to SAFE_OP.\n", slave);
+         ec_slave[slave].state = EC_STATE_SAFE_OP;
+         ec_writestate(slave);
       }
       else if(ec_slave[slave].state > 0)
       {
@@ -255,7 +255,7 @@ bool EtherCatManager::initSoem(const std::string& ifname) {
   printf("SOEM IOMap size: %d\n", iomap_size);
 
   // locates dc slaves - ???
-  ec_configdc();
+  // ec_configdc();
 
   // '0' here addresses all slaves
   if (ec_statecheck(0, EC_STATE_SAFE_OP, EC_TIMEOUTSTATE*4) != EC_STATE_SAFE_OP)
@@ -270,7 +270,7 @@ bool EtherCatManager::initSoem(const std::string& ifname) {
       then proceeding through 40 send/recieve cycles each waiting up to 50 ms for a
       response about the status. 
   */
- for(int i=1;i<4;i++){
+ for(int i=1;i<5;i++){
     ec_slave[i].state = EC_STATE_OPERATIONAL;
     ec_send_processdata();
     ec_receive_processdata(EC_TIMEOUTRET);
