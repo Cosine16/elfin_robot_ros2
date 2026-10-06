@@ -23,17 +23,36 @@ def load_yaml(package_name, file_path):
         # parent of IOError, OSError *and* WindowsError where available.
         return None
 
+# DEEP MERGE: override keys win; nested dicts are merged recursively.
+def deep_merge(base, override):
+    if not isinstance(base, dict) or not isinstance(override, dict):
+        return override
+    result = dict(base)
+    for k, v in override.items():
+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):
+            result[k] = deep_merge(result[k], v)
+        else:
+            result[k] = v
+    return result
+
 # ========== **GENERATE LAUNCH DESCRIPTION** ========== #
 
 def generate_launch_description():
-    elfin_drivers_yaml = os.path.join(get_package_share_directory("elfin_robot_bringup"),
-        "config","elfin_drivers.yaml")
+    pkg_bringup = "elfin_robot_bringup"
+    base = load_yaml(pkg_bringup, os.path.join("config", "elfin_drivers.yaml")) or {}
+
+    # Per-machine local override (git-ignored, e.g. elfin_drivers.local.yaml).
+    # Create it ONLY on machines whose config differs from the committed baseline.
+    local = load_yaml(pkg_bringup, os.path.join("config", "elfin_drivers.local.yaml"))
+    if local is not None:
+        base = deep_merge(base, local)
+
     elfin_ethercat_node = Node(
         name="elfin_ethercat_driver_node",
         package = "elfin_ethercat_driver",
         executable = "elfin_ethercat_driver",
         output = "screen",
-        parameters = [elfin_drivers_yaml]
+        parameters = [base]
     )
 
     return LaunchDescription(
