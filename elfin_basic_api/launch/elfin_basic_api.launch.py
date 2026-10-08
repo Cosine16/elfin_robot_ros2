@@ -40,15 +40,15 @@ def generate_launch_description():
 
     robot_description_config = xacro.process_file(
         os.path.join(
-            get_package_share_directory("elfin10_ros2_gazebo"),
+            get_package_share_directory("elfin5_ros2_gazebo"),
             "urdf",
-            "elfin10.urdf.xacro",
+            "elfin5.urdf.xacro",
         )
     )
     robot_description = {"robot_description": robot_description_config.toxml()}
     # Robot description, SRDF:
     robot_description_semantic_config = load_file(
-        "elfin10_ros2_moveit2", "config/elfin10.srdf"
+        "elfin5_ros2_moveit2", "config/elfin5.srdf"
     )
     robot_description_semantic = {
         "robot_description_semantic": robot_description_semantic_config
@@ -56,7 +56,7 @@ def generate_launch_description():
 
     # Kinematics.yaml file:
     kinematics_yaml = load_yaml(
-        "elfin10_ros2_moveit2", "config/kinematics.yaml"
+        "elfin5_ros2_moveit2", "config/kinematics.yaml"
     )
 
     elfin_basic_api_node = Node(
