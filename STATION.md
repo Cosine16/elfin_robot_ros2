@@ -24,6 +24,8 @@ git submodule 方式引入并维护。
 4. `fix(driver)` — error_log 格式串拼接错误修复
 5. `feat(station)` — E05-1195_Pro 工位适配：EtherCAT 从站拓扑（驱动 {2,3,4} + IO 5）、
    count_zeros 出厂标定、Elfin5 前两轴 axis_torque_factors
+6. `feat(station)` — PF067250020（E05-Pro）出厂原点重新标定：替换 count_zeros；
+   网卡确认为板载 enp2s0 接机械臂（USB 网卡 enx000ec68eca09 走互联网，勿配给 SOEM）
 
 ## 与上游同步流程（上游更新频率约年 1–2 次）
 
