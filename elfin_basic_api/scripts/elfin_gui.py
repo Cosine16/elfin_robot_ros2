@@ -443,6 +443,10 @@ class MyFrame(wx.Frame,Node):
             self.ps_display[i].SetPosition((int(pos_ps_display[0]), int(pos_ps_display[1]+abs(40-self.ps_display[i].GetSize()[1])/2)))
             dis_tmp+=ps_btn_length[3]+ps_distances[3]
 
+        # 安全兜底: 指针滑出按钮后再松开, 按钮本身收不到 EVT_LEFT_UP,
+        # 面板级别统一补发停止, 避免点动失去控制
+        self.panel.Bind(wx.EVT_LEFT_UP, lambda evt: self.release_button(evt, 0))
+
         # 20201209: add the DO,LED,DI,end button.
         for i in range(len(self.DO_btn_display)):
             self.DO_btn_display[i]=wx.Button(self.panel,label='DO'+str(i),

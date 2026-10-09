@@ -63,6 +63,10 @@ Created on Mon Nov 13 15:20:10 2017
 #include <tf2_ros/transform_listener.h>
 #include <tf2_eigen/tf2_eigen.h>
 
+#include <chrono>
+#include <future>
+#include <mutex>
+
 namespace elfin_basic_api {
 
 class ElfinTeleopAPI
@@ -96,6 +100,14 @@ private:
 
     rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SharedPtr action_client_;
     control_msgs::action::FollowJointTrajectory::Goal goal_;
+
+    // 点动目标句柄: 松开按钮靠 cancel 停住 (Humble JTC 拒收空轨迹, 旧的
+    // "发空目标顶替"已失效); 句柄被服务/订阅多个回调共享, 加锁保护
+    using FJTGoalHandle = rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::GoalHandle;
+    FJTGoalHandle::SharedPtr active_goal_handle_;
+    std::mutex goal_handle_mutex_;
+    void sendTeleopGoal();
+    bool cancelActiveGoal();
 
     rclcpp::Subscription<std_msgs::msg::Int64>::SharedPtr  sub_teleop_joint_command_no_limit_;
 

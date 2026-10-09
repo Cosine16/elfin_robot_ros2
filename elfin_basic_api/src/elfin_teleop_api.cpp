@@ -79,6 +79,52 @@ ElfinTeleopAPI::ElfinTeleopAPI(const rclcpp::Node::SharedPtr& node,moveit::plann
     root_link_=group_->getPlanningFrame();
 }
 
+void ElfinTeleopAPI::sendTeleopGoal()
+{
+    try
+    {
+        auto future=action_client_->async_send_goal(goal_);
+        if(future.wait_for(std::chrono::seconds(2))!=std::future_status::ready)
+        {
+            RCLCPP_WARN(teleop_nh_->get_logger(), "teleop goal not accepted within 2s");
+            return;
+        }
+        auto handle=future.get();
+        if(!handle)
+        {
+            RCLCPP_WARN(teleop_nh_->get_logger(), "teleop goal rejected by controller");
+            return;
+        }
+        std::lock_guard<std::mutex> lock(goal_handle_mutex_);
+        active_goal_handle_=handle;
+    }
+    catch (const std::exception &ex)
+    {
+        RCLCPP_WARN(teleop_nh_->get_logger(), "teleop goal send failed: %s", ex.what());
+    }
+}
+
+bool ElfinTeleopAPI::cancelActiveGoal()
+{
+    FJTGoalHandle::SharedPtr handle;
+    {
+        std::lock_guard<std::mutex> lock(goal_handle_mutex_);
+        handle=active_goal_handle_;
+        active_goal_handle_.reset();
+    }
+    if(!handle)
+        return false;
+    using action_msgs::msg::GoalStatus;
+    const auto status=handle->get_status();
+    if(status!=GoalStatus::STATUS_ACCEPTED && status!=GoalStatus::STATUS_EXECUTING &&
+       status!=GoalStatus::STATUS_CANCELING)
+        return false;
+    auto cancel_future=action_client_->async_cancel_goal(handle);
+    if(cancel_future.wait_for(std::chrono::seconds(1))!=std::future_status::ready)
+        RCLCPP_WARN(teleop_nh_->get_logger(), "cancel request not acknowledged within 1s");
+    return true;
+}
+
 void ElfinTeleopAPI::setVelocityScaling(double data)
 {
     velocity_scaling_=data;
@@ -113,7 +159,7 @@ void ElfinTeleopAPI::teleopJointCmdNoLimitCB(const std_msgs::msg::Int64::SharedP
     point_tmp.positions=position_tmp;
     point_tmp.time_from_start.nanosec=joint_duration_ns_;
     goal_.trajectory.points.push_back(point_tmp);
-    action_client_->async_send_goal(goal_);
+    sendTeleopGoal();
     goal_.trajectory.points.clear();
 }
 
@@ -183,7 +229,7 @@ bool ElfinTeleopAPI::jointTeleop_cb(const std::shared_ptr<elfin_robot_msgs::srv:
         point_tmp.time_from_start=rclcpp::Duration::from_seconds(duration_from_speed);;
         goal_.trajectory.points.push_back(point_tmp);
     }
-    action_client_->async_send_goal(goal_);
+    sendTeleopGoal();
     goal_.trajectory.points.clear();
     resp->success=true;
     std::string result="robot is moving in ";
@@ -386,7 +432,7 @@ bool ElfinTeleopAPI::cartTeleop_cb(const std::shared_ptr<elfin_robot_msgs::srv::
         resp->message=result;
         return true;
     }
-    action_client_->async_send_goal(goal_);
+    sendTeleopGoal();
     goal_.trajectory.points.clear();
     resp->success=true;
     std::string result="robot is moving in ";
@@ -495,7 +541,7 @@ bool ElfinTeleopAPI::homeTeleop_cb(const std::shared_ptr<std_srvs::srv::SetBool:
         }
     }
 
-    action_client_->async_send_goal(goal_);
+    sendTeleopGoal();
     goal_.trajectory.points.clear();
 
     resp->success=true;
@@ -507,10 +553,12 @@ bool ElfinTeleopAPI::homeTeleop_cb(const std::shared_ptr<std_srvs::srv::SetBool:
 
 bool ElfinTeleopAPI::teleopStop_cb(const std::shared_ptr<std_srvs::srv::SetBool::Request> req, const std::shared_ptr<std_srvs::srv::SetBool::Response> resp)
 {
+    // Humble 的 joint_trajectory_controller 会拒收空轨迹目标, 旧实现"发空目标
+    // 顶替"根本顶不掉正在执行的旧目标, 点动会一直跑到关节限位。改为显式 cancel。
     goal_.trajectory.points.clear();
-    action_client_->async_send_goal(goal_);
+    bool canceled=cancelActiveGoal();
     resp->success=true;
-    resp->message="stop moving";
+    resp->message=canceled ? "stop moving" : "no active teleop motion";
     return true;
 }
 
