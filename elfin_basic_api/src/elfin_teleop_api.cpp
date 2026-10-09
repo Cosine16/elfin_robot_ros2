@@ -81,27 +81,37 @@ ElfinTeleopAPI::ElfinTeleopAPI(const rclcpp::Node::SharedPtr& node,moveit::plann
 
 void ElfinTeleopAPI::sendTeleopGoal()
 {
-    try
+    // 不能同步等 goal 响应: 响应处理是本节点互斥回调组里的回调, 在服务回调里
+    // 阻塞等待会自锁 (表现为 2s 超时、句柄丢失、松手 cancel 失效)。
+    // 改为 goal_response_callback 异步接管句柄。
     {
-        auto future=action_client_->async_send_goal(goal_);
-        if(future.wait_for(std::chrono::seconds(2))!=std::future_status::ready)
-        {
-            RCLCPP_WARN(teleop_nh_->get_logger(), "teleop goal not accepted within 2s");
-            return;
-        }
-        auto handle=future.get();
-        if(!handle)
-        {
-            RCLCPP_WARN(teleop_nh_->get_logger(), "teleop goal rejected by controller");
-            return;
-        }
         std::lock_guard<std::mutex> lock(goal_handle_mutex_);
-        active_goal_handle_=handle;
+        stop_pending_=false;   // 新的点按意图优先于尚未到位的 stop
     }
-    catch (const std::exception &ex)
-    {
-        RCLCPP_WARN(teleop_nh_->get_logger(), "teleop goal send failed: %s", ex.what());
-    }
+    auto options=rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SendGoalOptions();
+    options.goal_response_callback=
+        [this](FJTGoalHandle::SharedPtr handle)
+        {
+            if(!handle)
+            {
+                RCLCPP_WARN(teleop_nh_->get_logger(), "teleop goal rejected by controller");
+                return;
+            }
+            bool cancel_now=false;
+            {
+                std::lock_guard<std::mutex> lock(goal_handle_mutex_);
+                if(stop_pending_)
+                {
+                    stop_pending_=false;
+                    cancel_now=true;
+                }
+                else
+                    active_goal_handle_=handle;
+            }
+            if(cancel_now)
+                action_client_->async_cancel_goal(handle);
+        };
+    action_client_->async_send_goal(goal_, options);
 }
 
 bool ElfinTeleopAPI::cancelActiveGoal()
@@ -111,17 +121,22 @@ bool ElfinTeleopAPI::cancelActiveGoal()
         std::lock_guard<std::mutex> lock(goal_handle_mutex_);
         handle=active_goal_handle_;
         active_goal_handle_.reset();
+        if(!handle)
+        {
+            // goal 可能还在途: 标记 stop, 响应回调拿到句柄后立即取消,
+            // 堵死"快速点按早于 acceptance"的失控窗口
+            stop_pending_=true;
+            return false;
+        }
+        stop_pending_=false;
     }
-    if(!handle)
-        return false;
     using action_msgs::msg::GoalStatus;
     const auto status=handle->get_status();
     if(status!=GoalStatus::STATUS_ACCEPTED && status!=GoalStatus::STATUS_EXECUTING &&
        status!=GoalStatus::STATUS_CANCELING)
         return false;
-    auto cancel_future=action_client_->async_cancel_goal(handle);
-    if(cancel_future.wait_for(std::chrono::seconds(1))!=std::future_status::ready)
-        RCLCPP_WARN(teleop_nh_->get_logger(), "cancel request not acknowledged within 1s");
+    // 只发不收: cancel 请求立即上总线, 回执处理同样在互斥回调组里, 等待会自锁
+    action_client_->async_cancel_goal(handle);
     return true;
 }
 

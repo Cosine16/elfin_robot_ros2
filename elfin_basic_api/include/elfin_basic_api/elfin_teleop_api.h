@@ -105,6 +105,9 @@ private:
     // "发空目标顶替"已失效); 句柄被服务/订阅多个回调共享, 加锁保护
     using FJTGoalHandle = rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::GoalHandle;
     FJTGoalHandle::SharedPtr active_goal_handle_;
+    // stop 到达时 goal 尚在途 (句柄未就位): 标记后由 goal 响应回调接管取消,
+    // 堵死"快速点按早于 acceptance"的失控窗口
+    bool stop_pending_=false;
     std::mutex goal_handle_mutex_;
     void sendTeleopGoal();
     bool cancelActiveGoal();

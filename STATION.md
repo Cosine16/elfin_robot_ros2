@@ -27,7 +27,8 @@ git submodule 方式引入并维护。
 6. `feat(station)` — PF067250020（E05-Pro）出厂原点重新标定：替换 count_zeros；
    网卡确认为板载 enp2s0 接机械臂（USB 网卡 enx000ec68eca09 走互联网，勿配给 SOEM）
 7. `fix(teleop)` — 点动松手不停（撞机级）：Humble 的 JTC 拒收空轨迹目标，旧的
-   "发空目标顶替"式 stop 静默失效；改为保存 goal handle + 显式 cancel，
+   "发空目标顶替"式 stop 静默失效；改为 goal_response_callback 异步接管句柄 +
+   显式 cancel（含在途目标快速点按兜底；同步等待会撞互斥回调组自锁），
    面板补 EVT_LEFT_UP 丢失兜底
 
 ## 与上游同步流程（上游更新频率约年 1–2 次）
