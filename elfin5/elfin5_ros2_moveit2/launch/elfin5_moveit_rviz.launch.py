@@ -8,6 +8,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch.substitutions import LaunchConfiguration,Command, FindExecutable, PathJoinSubstitution
 from launch.actions import ExecuteProcess, IncludeLaunchDescription, RegisterEventHandler, DeclareLaunchArgument,Shutdown,OpaqueFunction
 from launch.conditions import IfCondition, UnlessCondition
@@ -70,8 +71,9 @@ def generate_launch_description():
                 get_package_share_directory("elfin5_ros2_gazebo"),
                 "urdf", "elfin5.urdf.xacro")
             print('[elfin5_moveit_rviz] 使用厂家 URDF(无相机)')
-        return {'robot_description': Command(
-            [FindExecutable(name='xacro'), ' ', xacro_path] + xacro_args)}
+        return {'robot_description': ParameterValue(
+            Command([FindExecutable(name='xacro'), ' ', xacro_path] + xacro_args),
+            value_type=str)}
 
     # load robot description, srdf
     robot_description_semantic_config = load_file(
